@@ -3,15 +3,15 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { authRepository } from "./auth.repository";
 
-const ACCESS_SECRET = process.env.ACCESS_TOKEN_SECRET!;
-const REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET!;
+const JWT_SECRET = process.env.JWT_SECRET!;
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET!;
 
 const generateAccessToken = (userId: string, role: string) => {
-  return jwt.sign({ userId, role }, ACCESS_SECRET, { expiresIn: "15m" });
+  return jwt.sign({ userId, role }, JWT_SECRET, { expiresIn: "15m" });
 };
 
 const generateRefreshToken = async (userId: string) => {
-  const token = jwt.sign({ userId }, REFRESH_SECRET, { expiresIn: "7d" });
+  const token = jwt.sign({ userId }, JWT_REFRESH_SECRET, { expiresIn: "7d" });
 
   await authRepository.createRefreshToken({
     token,
@@ -95,7 +95,7 @@ export const authService = {
       throw new Error("Invalid refresh token");
     }
 
-    const payload = jwt.verify(token, REFRESH_SECRET) as any;
+    const payload = jwt.verify(token, JWT_REFRESH_SECRET) as any;
     return {
       accessToken: generateAccessToken(payload.userId, "USER"),
     };
