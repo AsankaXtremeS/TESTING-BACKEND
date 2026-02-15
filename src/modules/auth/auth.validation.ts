@@ -1,3 +1,4 @@
+// Validation functions for registration and login requests.
 import validator from "validator";
 
 export const validateRegisterUser = (data: any) => {

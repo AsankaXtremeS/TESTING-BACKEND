@@ -37,4 +37,4 @@ coverage/
 *.pdf
 
 # Ignore the entire prisma folder
-prisma/
+

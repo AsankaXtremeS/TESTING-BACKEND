@@ -1,3 +1,4 @@
+// Type definitions for user roles and auth input types.
 export type Role = "STUDENT" | "PROFESSIONAL" | "EMPLOYER" | "ADMIN";
 
 export interface RegisterUserInput {

@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ENUMS
+
+
+enum Role {
+  STUDENT
+  PROFESSIONAL
+  EMPLOYER
+  ADMIN
+}
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+  LINKEDIN
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+
+// USER (Core Identity)
+
+
+model User {
+  id String @id @default(uuid())
+
+  firstName String?
+  lastName  String?
+
+  email    String  @unique
+  password String? // null for OAuth users
+
+  role       Role
+  isVerified Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  authAccounts        AuthAccount[]
+  refreshTokens       RefreshToken[]
+  verificationTokens  VerificationToken[]
+  passwordResetTokens PasswordResetToken[]
+  employerProfile     EmployerProfile?
+}
+
+// OAUTH PROVIDERS (Google / LinkedIn Ready)
+
+
+model AuthAccount {
+  id String @id @default(uuid())
+
+  provider       AuthProvider
+  providerUserId String
+
+  accessToken  String?
+  refreshToken String?
+  expiresAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+}
+
+
+// REFRESH TOKENS (JWT Rotation Support)
+
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  isRevoked Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+
+// EMAIL VERIFICATION TOKENS
+
+
+model VerificationToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+
+// PASSWORD RESET TOKENS
+
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+
+// EMPLOYER PROFILE (Business Registration Flow)
+
+
+model EmployerProfile {
+  id String @id @default(uuid())
+
+  userId String @unique
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  companyName String
+
+  registrationFileUrl  String
+  registrationFileName String
+
+  verificationStatus VerificationStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+}

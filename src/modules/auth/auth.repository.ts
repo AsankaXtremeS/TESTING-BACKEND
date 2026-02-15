@@ -1,3 +1,4 @@
+// Repository functions for user, employer, refresh token, and password reset token database operations.
 import { prisma } from "../../config/db";
 
 export const authRepository = {
@@ -21,6 +22,7 @@ export const authRepository = {
   },
 
   findRefreshToken(token: string) {
+    // token is now always hashed
     return prisma.refreshToken.findUnique({ where: { token } });
   },
 
@@ -43,10 +45,15 @@ export const authRepository = {
   },
 
   findPasswordResetToken(token: string) {
+    // token is now always hashed
     return prisma.passwordResetToken.findUnique({ where: { token } });
   },
 
   deletePasswordResetToken(token: string) {
     return prisma.passwordResetToken.delete({ where: { token } });
+  },
+
+  updateUserPassword(userId: string, password: string) {
+    return prisma.user.update({ where: { id: userId }, data: { password } });
   },
 };
