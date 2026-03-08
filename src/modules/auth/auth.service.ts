@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { authRepository } from "./auth.repository";
 import { createHash } from "crypto";
+import { prisma } from "../../config/db";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET!;
@@ -62,24 +63,37 @@ export const authService = {
     const existing = await authRepository.findUserByEmail(data.email);
     if (existing) throw new Error("User already exists");
 
+    if (!data.registrationFileUrl || !data.registrationFileName) {
+      throw new Error("Business registration PDF is required");
+    }
+
     const hashed = await bcrypt.hash(data.password, 10);
 
-    const user = await authRepository.createUser({
-      email: data.email,
-      password: hashed,
-      role: "EMPLOYER",
+    await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email: data.email,
+          password: hashed,
+          role: "EMPLOYER",
+        },
+      });
+
+      await tx.employerProfile.create({
+        data: {
+          userId: user.id,
+          companyName: data.companyName,
+          registrationFileUrl: data.registrationFileUrl,
+          registrationFileName: data.registrationFileName,
+        },
+      });
+
+      return user;
     });
 
-    await authRepository.createEmployerProfile({
-      userId: user.id,
-      companyName: data.companyName,
-      registrationFileUrl: data.registrationFileUrl,
-      registrationFileName: data.registrationFileName,
-    });
-
+    const created = await authRepository.findUserByEmail(data.email);
     return {
       message: "Registration successful. Await admin approval.",
-      userId: user.id,
+      userId: created!.id,
     };
   },
 
@@ -122,8 +136,12 @@ export const authService = {
     // Issue new refresh token
     const newRefreshToken = await generateRefreshToken(payload.userId);
 
+    // Fetch the user to get the real role
+    const user = await authRepository.findUserById(payload.userId);
+    if (!user) throw new Error("User not found");
+
     return {
-      accessToken: generateAccessToken(payload.userId, "USER"),
+      accessToken: generateAccessToken(payload.userId, user.role),
       refreshToken: newRefreshToken,
     };
   },
@@ -172,5 +190,14 @@ export const authService = {
   async approveEmployer(userId: string) {
     await authRepository.approveEmployer(userId);
     return { message: "Employer approved successfully" };
+  },
+
+  async rejectEmployer(userId: string) {
+    await authRepository.rejectEmployer(userId);
+    return { message: "Employer rejected" };
+  },
+
+  async getPendingEmployers() {
+    return authRepository.getPendingEmployers();
   },
 };

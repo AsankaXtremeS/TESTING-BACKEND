@@ -10,6 +10,8 @@ import {
   forgotPassword,
   resetPassword,
   approveEmployer,
+  rejectEmployer,
+  getPendingEmployers,
 } from "./auth.controller";
 import { upload } from "../../middlewares/upload.middleware";
 import rateLimit from "express-rate-limit";
@@ -37,5 +39,7 @@ router.post("/logout", logout);
 router.post("/forgot-password", sensitiveLimiter, forgotPassword);
 router.post("/reset-password", sensitiveLimiter, resetPassword);
 router.post("/approve-employer", authenticate, requireRole("ADMIN"), approveEmployer);
+router.post("/reject-employer", authenticate, requireRole("ADMIN"), rejectEmployer);
+router.get("/pending-employers", authenticate, requireRole("ADMIN"), getPendingEmployers);
 
 export default router;

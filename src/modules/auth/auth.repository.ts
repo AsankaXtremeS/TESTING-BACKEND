@@ -9,6 +9,27 @@ export const authRepository = {
     });
   },
 
+  findUserById(id: string) {
+    return prisma.user.findUnique({
+      where: { id },
+      include: { employerProfile: true },
+    });
+  },
+
+  getPendingEmployers() {
+    return prisma.user.findMany({
+      where: { role: 'EMPLOYER', employerProfile: { verificationStatus: 'PENDING' } },
+      include: { employerProfile: true },
+    });
+  },
+
+  rejectEmployer(userId: string) {
+    return prisma.employerProfile.update({
+      where: { userId },
+      data: { verificationStatus: 'REJECTED' },
+    });
+  },
+
   createUser(data: any) {
     return prisma.user.create({ data });
   },
