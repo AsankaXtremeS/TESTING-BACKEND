@@ -4,8 +4,10 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { authRepository } from "./auth.repository";
+import { validateResetPassword } from "./auth.validation";
 import { createHash } from "crypto";
 import { prisma } from "../../config/db";
+import { sendPasswordResetEmail } from "../../utils/email";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET!;
@@ -155,6 +157,9 @@ export const authService = {
     const user = await authRepository.findUserByEmail(email);
     if (!user) return { message: "If email exists, reset link sent" };
 
+    // Invalidate any previous reset tokens for this user
+    await authRepository.deleteOldPasswordResetTokens(user.id);
+
     const resetToken = crypto.randomBytes(32).toString("hex");
     const hashedResetToken = hashToken(resetToken);
 
@@ -164,13 +169,14 @@ export const authService = {
       expiresAt: new Date(Date.now() + 15 * 60 * 1000),
     });
 
-    // Send resetToken (not hashed) to user via email in real app
-    console.log("Reset token:", resetToken);
+    await sendPasswordResetEmail(email, resetToken);
 
     return { message: "If email exists, reset link sent" };
   },
 
   async resetPassword(token: string, newPassword: string) {
+    validateResetPassword(newPassword);
+
     const hashedToken = hashToken(token);
     const stored = await authRepository.findPasswordResetToken(hashedToken);
     if (!stored || stored.expiresAt < new Date()) {

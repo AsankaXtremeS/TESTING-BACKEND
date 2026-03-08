@@ -65,6 +65,10 @@ export const authRepository = {
     return prisma.passwordResetToken.create({ data });
   },
 
+  deleteOldPasswordResetTokens(userId: string) {
+    return prisma.passwordResetToken.deleteMany({ where: { userId } });
+  },
+
   findPasswordResetToken(token: string) {
     // token is now always hashed
     return prisma.passwordResetToken.findUnique({ where: { token } });
